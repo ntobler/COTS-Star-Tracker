@@ -18,8 +18,8 @@ import os
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
-from star_tracker.support_functions import *
-from star_tracker.array_transformations import *
+from cots_star_tracker.support_functions import *
+from cots_star_tracker.array_transformations import *
 
 
 ################################

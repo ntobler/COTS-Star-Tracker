@@ -24,8 +24,8 @@ import output_converter
 import matplotlib.pyplot as plt
 from math import *
 from datetime import datetime
-from star_tracker.support_functions import *
-from star_tracker.array_transformations import *
+from cots_star_tracker.support_functions import *
+from cots_star_tracker.array_transformations import *
 
 
 ################################

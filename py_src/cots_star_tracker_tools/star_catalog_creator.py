@@ -52,8 +52,8 @@ import os
 import cv2
 import time
 import numpy as np
-import star_tracker.ground as ground
-import star_tracker.cam_matrix as cam_matrix
+import cots_star_tracker.ground as ground
+import cots_star_tracker.cam_matrix as cam_matrix
 
 #############################################################
 #USER-INPUT VARS

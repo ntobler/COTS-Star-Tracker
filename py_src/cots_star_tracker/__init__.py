@@ -17,7 +17,7 @@ import sys
 ################################
 #MAIN CODE
 ################################
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+from cots_star_tracker.main import star_tracker
 
 
 

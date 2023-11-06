@@ -15,7 +15,7 @@ star images
 import os
 import cv2
 import time
-import star_tracker.ground as ground
+import cots_star_tracker.ground as ground
 
 
 #############################################################

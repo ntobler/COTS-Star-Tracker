@@ -10,7 +10,13 @@ This program is intended to:
 * generate camera cal parameters
 * save off camera params
 
-''' 
+A convenient ChArUco target generator can be found on
+https://calib.io/pages/camera-calibration-pattern-generator
+
+> MAKE SURE number_of_target_rows AND number_of_target_columns ARE
+  ODD NUMBERS as there is an inconsisitency between opencv and calib.io
+
+'''
 
 ################################
 #LOAD LIBRARIES
@@ -27,13 +33,15 @@ import numpy as np
 #USER INPUT
 ################################
 show_plots = True
-img_extension = '.jpg'
+img_extension = 'resized.JPG'
 
 # Define ChArUco target
-number_of_target_rows = 5
-number_of_target_columns = 5
-aruco_square_size = 2.25*0.0254 #m
-checker_square_size = 4.5*0.0254 #m
+number_of_target_rows = 9
+number_of_target_columns = 17
+checker_square_size = 0.106/2 #m
+aruco_square_size = checker_square_size * 11/15 #m
+
+folder = "images/calibration2"
 
 
 ################################
@@ -60,8 +68,11 @@ prev_img_shape = None
 dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_1000)
 Charuco_board = cv2.aruco.CharucoBoard_create(number_of_target_columns, number_of_target_rows, checker_square_size, aruco_square_size, dictionary)
 
+drawn_pattern = Charuco_board.draw((1000,1000))
+res = cv2.imwrite("charuco.jpg", drawn_pattern)
+
 # Extracting path of individual image stored in a given directory
-images = glob.glob('*'+img_extension)
+images = glob.glob(folder + '/*'+img_extension)
 
 print("\nLooking for images ending in " + str(img_extension)+"...")
 print('...found ' + str(len(images)) + ' images:')

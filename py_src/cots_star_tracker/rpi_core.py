@@ -47,8 +47,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 ################################
 #LOAD LIBRARIES
 ################################
-from array_transformations import check_axis_decorator
-from support_functions import timing_decorator
+from cots_star_tracker.array_transformations import check_axis_decorator
+from cots_star_tracker.support_functions import timing_decorator
 
 ################################
 #USER INPUT
@@ -285,14 +285,13 @@ def attitude_svd(ei, es):
 
 @timing_decorator
 def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
-                    k, k_vector_interp, watchdog=None, verbose=False):
+                    k, k_vector_interp, watchdog=10., verbose=False):
     import time
     import numpy as np
     import array_transformations as xforms
 
     # initialize values
-    start_time = time.time()
-    if watchdog is None: watchdog = 3600 #if no watchdog was provided, set it to an hour
+    start_time = time.monotonic()
     nmatches = 0
     nmatch_array = [] #used for troubleshooting
     unsolved_potentials = 0 #used for troubleshooting
@@ -311,11 +310,12 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
     if n_obs < nmatch:
         if verbose: print('Insufficient number of candidates to process for attitude estimation')
         return q_est, idmatch, nmatches
+
+    # Get all combinations of observed stars
     mm = enhanced_pattern_shifting(np.arange(0, n_obs, 1, dtype=int))
 
     if verbose: print("    [triangle_isa_id]: length of enhanced pattern shifting return: " + str(len(mm)))
-    for pair in np.arange(0, len(mm)-1, 1, dtype=int):
-        t_idx = mm[pair]
+    for t_idx in mm:
         # calculate the interstar angle between each star pair with in the triplet
         star_pair_ab = np.concatenate(([x_obs[:, t_idx[0]], x_obs[:, t_idx[1]]])).reshape(1, 6)
         star_pair_bc = np.concatenate(([x_obs[:, t_idx[1]], x_obs[:, t_idx[2]]])).reshape(1, 6)
@@ -336,45 +336,48 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
         pairs_match_bc = np.concatenate((star_pairs[idx_bc, :], star_pairs[idx_bc, ::-1]))
         pairs_match_ac = np.concatenate((star_pairs[idx_ac, :], star_pairs[idx_ac, ::-1]))
 
-        for ii_ab in pairs_match_ab:
-            A = ii_ab[0]
-            B = ii_ab[1]
+        A_matches = pairs_match_ac[:, 0] == pairs_match_ab[:, 0]
+        B_matches = pairs_match_bc[:, 0] == pairs_match_ab[:, 1]
+
+        for A, B in pairs_match_ab:
 
             # Find possible values for C from leg AC
-            match_row_ac = np.where(pairs_match_ac[:, 0] == A)[0]
-            # Find possible values for C from leg BC
-            match_row_bc = np.where(pairs_match_bc[:, 0] == B)[0]
+            A_matches = np.where(pairs_match_ac[:, 0] == A)[0]
+            no_A_matches = len(A_matches)
 
-            if (time.time()-start_time) > watchdog:
-                nmatches = 0
-                idmatch = np.zeros(len(x_obs[0]))
-                q_est = np.empty((4, ))
-                q_est.fill(np.nan)
-                if verbose: print("    [triangle_isa_id]: hit watchdog timeout (" + str(time.time()-start_time)+"s of "+str(watchdog)+"s")
-                return q_est, idmatch, nmatches
+            if no_A_matches != 1:
+                # dont look any further
+                continue
+
+            # Find possible values for C from leg BC
+            B_matches = np.where(pairs_match_bc[:, 0] == B)[0]
+            no_B_matches = len(B_matches)
+
+            if no_B_matches != 1:
+                # dont look any further
+                continue
+
+            if (time.monotonic() - start_time) > watchdog:
+                raise Exception("Timeout reached")
 
             # if we find that the number of matches above are both 1,
             # check if those two corresponding C values are the same
             #TODO: this explicitly requires only 1 match, look into making this more robust and/or a way to find all 3 catalog angle matches in one go
-            if match_row_ac.__len__() > 1 or match_row_bc.__len__() > 1:
-                if match_row_ac.__len__() > 0 and match_row_bc.__len__() > 0:
-                    #print(match_row_ac.__len__())
-                    #print(match_row_bc.__len__())
-                    #print('----')
-                    unsolved_potentials+=1
+            if no_A_matches > 1 or no_B_matches > 1:
+                if no_A_matches > 0 and no_B_matches > 0:
+                    unsolved_potentials += 1
 
-            if match_row_ac.__len__() == 1 and match_row_bc.__len__() == 1:
+            if no_A_matches == 1 and no_B_matches == 1:
                 solved_potentials+=1
 
-
-            #TODO: could ditch the above, BUT would then need to clean up lists by removing those that aren't common to all
-                C1 = pairs_match_ac[match_row_ac, 1]
-                C2 = pairs_match_bc[match_row_bc, 1]
+                #TODO: could ditch the above, BUT would then need to clean up lists by removing those that aren't common to all
+                C1 = pairs_match_ac[A_matches, 1]
+                C2 = pairs_match_bc[B_matches, 1]
 
                 if C1 == C2:
                     # get
                     p = x_cat[:, [A, B, C1[0]]]
-                    y = x_obs[:, mm[pair, :]]
+                    y = x_obs[:, t_idx]
 
                     # perform singular value decomposition using Wahba's problem
                     t_hat = attitude_svd(p, y)
