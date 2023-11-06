@@ -21,4 +21,4 @@
 
 venv
 build
-star_tracker.egg-info
+py_src/cots_star_tracker.egg-info

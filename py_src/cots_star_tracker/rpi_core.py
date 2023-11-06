@@ -78,7 +78,7 @@ def interstar_angle(star_pair, axis=None):
     # axis = 0: pairs of stars are column vectors
     # axis = 1: pairs of stars are row vectors
     import numpy as np
-    import array_transformations as xforms
+    import cots_star_tracker.array_transformations as xforms
     # determine if star pairs are row or column vectors
     # and perform the dot product for each unit vector pair
     # ndim = 6
@@ -194,7 +194,7 @@ def ksearch(kvec, xin, d_thresh, d_cat, m, q):
 
 def full_obs_match(x_obs, x_cat, isa_thresh):
     import numpy as np
-    from array_transformations import vector_norm
+    from cots_star_tracker.array_transformations import vector_norm
     from math import sin, cos
     n_obs = len(x_obs[0])
 
@@ -288,7 +288,7 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
                     k, k_vector_interp, watchdog=10., verbose=False):
     import time
     import numpy as np
-    import array_transformations as xforms
+    import cots_star_tracker.array_transformations as xforms
 
     # initialize values
     start_time = time.monotonic()

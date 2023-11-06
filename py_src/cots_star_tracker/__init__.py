@@ -1,24 +1,2 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-'''
-__init__.py
-
-This script is intended to enable installation
-
-'''
-
-################################
-#LOAD LIBRARIES
-################################
-import os
-import sys
-
-################################
-#MAIN CODE
-################################
 from cots_star_tracker.main import star_tracker
-
-
-
-
+from cots_star_tracker.cam_matrix import read_cam_json

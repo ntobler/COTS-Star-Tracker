@@ -26,7 +26,7 @@ def timing_decorator(func):
 def stars_in_fov(u_i, t_i2c, c, nrow, ncol, fov):
     import math
     import numpy as np
-    import array_transformations as xforms
+    import cots_star_tracker.array_transformations as xforms
     u_c = xforms.vector_array_transform(t_i2c, u_i)
     # Get stars within circular FOV
     idx_uc_fov = np.nonzero(u_c[:][2] >= math.cos(fov))[0]
@@ -49,7 +49,7 @@ def stars_in_fov(u_i, t_i2c, c, nrow, ncol, fov):
 
 
 def basic_cam(): #this function returns some arbitrary camera parameters as a stand-in when real values aren't available to support troubleshooting
-    import cam_matrix as cm
+    import cots_star_tracker.cam_matrix as cm
     # Test camera option 1
     # ncol = 640
     # nrow = 480
@@ -76,8 +76,8 @@ def basic_cam(): #this function returns some arbitrary camera parameters as a st
 
 
 def catalog2fov(q, c, img, stars):
-    import cam_matrix as cam
-    import array_transformations as xforms
+    import cots_star_tracker.cam_matrix as cam
+    import cots_star_tracker.array_transformations as xforms
     import numpy as np
     cam_res = img.shape
     nrow = cam_res[0]
@@ -98,8 +98,8 @@ def catalog2fov(q, c, img, stars):
 def reproject(img, c, idmatch, q_est, x_obs=None, x_cat=None):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    import array_transformations as xforms
-    import cam_matrix as cam
+    import cots_star_tracker.array_transformations as xforms
+    import cots_star_tracker.cam_matrix as cam
     import numpy as np
 
     c_inv = cam.cam_matrix_inv(c)
@@ -167,7 +167,7 @@ def find_candidate_stars(img, low_thresh=None, hi_thresh=None,
                          min_star_area=3, max_star_area=400, graphics=False):
     import numpy as np
     import cv2
-    from rpi_core import calculate_center_intensity
+    from  cots_star_tracker.rpi_core import calculate_center_intensity
 
     if low_thresh is None:
         percent_thresh = 0.995
