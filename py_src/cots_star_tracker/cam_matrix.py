@@ -69,7 +69,7 @@ def cam_matrix_inv(c):
 
 def cam2fov(cinv, nrow, ncol):
     import numpy as np
-    import array_transformations as xforms
+    import cots_star_tracker.array_transformations as xforms
 
     # get (1,1) pixel in unit vector form
     p1 = xforms.vector_array_transform(cinv, np.ones((3, 1)))

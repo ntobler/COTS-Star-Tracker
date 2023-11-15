@@ -48,14 +48,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 ################################
 #LOAD LIBRARIES
 ################################
-from array_transformations import check_axis_decorator
+from cots_star_tracker.array_transformations import check_axis_decorator
 
 ################################
 #SUPPORT FUNCTIONS
 ################################
 def kvector(input_cat):
     import numpy as np
-    import rpi_core
+    import cots_star_tracker.rpi_core as rpi_core
     m, q, sorted_cat = rpi_core.kvec_values(input_cat)
     nrow = len(sorted_cat)
 
@@ -155,7 +155,7 @@ def lpq_orthonormal_basis(ra_de_deg, axis=None):
 
 @check_axis_decorator(2)
 def proper_motion_correction(ra_de_deg, pm_rade_mas, plx_mas, rB, t, t_ep, axis=None):
-    import array_transformations as xforms
+    import cots_star_tracker.array_transformations as xforms
     import math
     import numpy as np
     import numpy.matlib as matlib
@@ -220,7 +220,7 @@ def read_star_catalog(starcat_file, brightness_thresh, t=None, cat_ep=None,
                       rB=None, excess_rows=None, index_col=2):
     from astropy.time import Time
     import numpy as np
-    import ground
+    import cots_star_tracker.ground
 
     if t is None:
         t = Time.now().byear
@@ -252,14 +252,14 @@ def read_star_catalog(starcat_file, brightness_thresh, t=None, cat_ep=None,
     plx = np.array(starcat[PLX].values)
 
     # Correct catalog entries for proper motion: 'u' is array of unit vectors to each star
-    u, _ = ground.proper_motion_correction(ra_de, pm_rade, plx, rB, t, cat_ep)
+    u, _ = cots_star_tracker.ground.proper_motion_correction(ra_de, pm_rade, plx, rB, t, cat_ep)
     return u, starcat
 
 
 def create_star_catalog(starcat_file, brightness_thresh, cat_ep=None, t=None, rB=None,
                         excess_rows=None, index_col=2, save_vals=False, fov=None, save_dir=None):
     import os
-    import rpi_core
+    import cots_star_tracker.rpi_core
     import numpy as np
     import itertools as it
 
@@ -278,7 +278,7 @@ def create_star_catalog(starcat_file, brightness_thresh, cat_ep=None, t=None, rB
                              u[:, star_pairs[:, 1]]))
 
     # Calculate interstar angles
-    istar_angle = rpi_core.interstar_angle(u_starpairs)
+    istar_angle = cots_star_tracker.rpi_core.interstar_angle(u_starpairs)
 
     # Remove star pairs that fall outside field of view angle
     if fov is not None:

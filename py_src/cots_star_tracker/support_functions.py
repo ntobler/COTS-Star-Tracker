@@ -95,15 +95,10 @@ def catalog2fov(q, c, img, stars):
     return p_fov[:, idx_rect]
 
 
-def reproject(img, c, idmatch, q_est, x_obs=None, x_cat=None):
-    import matplotlib as mpl
+def reproject(img, c, idmatch, q_est, x_obs, x_cat):
     import matplotlib.pyplot as plt
     import cots_star_tracker.array_transformations as xforms
-    import cots_star_tracker.cam_matrix as cam
     import numpy as np
-
-    c_inv = cam.cam_matrix_inv(c)
-    fov = cam.cam2fov(c_inv,img.shape[0],img.shape[1])
 
     id_cat = np.where(idmatch != -1)[0]
     nid_cat = np.where(idmatch == -1)[0]
@@ -113,27 +108,18 @@ def reproject(img, c, idmatch, q_est, x_obs=None, x_cat=None):
     mask[idmatch[id_cat][:, 0]] = False
     x_cat_nfound = x_cat[..., mask]
 
+    # Star pixel coordinates of the catalog
     cat_not_found = catalog2fov(q_est, c, img, x_cat_nfound)
     cat_found = catalog2fov(q_est, c, img, x_cat_found)
 
+    # Star pixel coordinates of the image detections
     x_obs_found = x_obs[:, id_cat]
     x_obs_invalid = x_obs[:, nid_cat]
 
-    dpi = 100
-    height, width = img.shape
-    figsize = width / float(dpi), height / float(dpi)
-
-    # Create a figure of the right size with one axes that takes up the full figure
-    #fig = plt.figure(figsize=figsize)
-    fig=plt.figure()
+    fig = plt.figure()
     ax = plt.subplot(111)
-    #ax.get_xaxis().set_visible(False)
-    #ax.get_yaxis().set_visible(False)
-    #plt.autoscale(tight=True)
-    # plt.axis('off')
 
-    imgplot = plt.imshow(img, cmap='Greys_r')
-
+    plt.imshow(img, cmap='Greys_r')
 
     row = 1
     col = 0
@@ -156,7 +142,6 @@ def reproject(img, c, idmatch, q_est, x_obs=None, x_cat=None):
                  markersize=25, markerfacecolor="None",
                  label="Unmatched catalog stars")
     handles, labels = ax.get_legend_handles_labels()
-    #ax.legend(handles, labels, loc='lower left', prop={'size': 20})
     ax.legend(handles, labels, loc='best', prop={'size': 20})
     fig.tight_layout()
 

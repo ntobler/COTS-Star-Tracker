@@ -137,9 +137,8 @@ def star_tracker(
     )
 
     if graphics and nmatches > 0:
-        # reproject(img, camera_matrix, x_obs=x_obs_found, x_inv=x_obs_invalid, cat_found=cat_found, cat_nfound=cat_nfound)
         support_functions.reproject(
-            img, camera_matrix, idmatch, q_est, x_obs=x_obs, x_cat=x_cat
+            img, camera_matrix, idmatch, q_est, x_obs, x_cat
         )
         # matched candidates: pixel position of the blob that we think is a star
         # invalid candidates: pixel position of a blob we found, but that we don't think are stars

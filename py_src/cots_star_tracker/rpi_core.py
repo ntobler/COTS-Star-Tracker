@@ -84,11 +84,11 @@ def interstar_angle(star_pair, axis=None):
     # ndim = 6
     # axis = xforms.check_axis(star_pair, ndim, axis=axis)
 
-    if axis is 0:
+    if axis == 0:
         star1 = star_pair[0:3, :]
         star2 = star_pair[3:6, :]
         dotp = xforms.vector_dot(star1, star2)
-    elif axis is 1:
+    elif axis == 1:
         star1 = star_pair[:, 0:3]
         star2 = star_pair[:, 3:6]
         dotp = xforms.vector_dot(star1.T, star2.T)
