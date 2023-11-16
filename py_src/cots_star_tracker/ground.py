@@ -215,6 +215,17 @@ def get_Hipparcos_data(starcat_file, magnitude_name, excess_rows,
     else:
         return starcat[starcat[magnitude_name]<brightness_thresh]
 
+def get_star_cat_file():
+    """Return the star catalog file contained in this package/repository."""
+    import pathlib
+    this_dir = pathlib.Path(__file__).parent
+    loc1 = this_dir.parent.parent / "data/starcat.tsv"
+    if loc1.exists():
+        return loc1.absolute().expanduser()
+    loc2 = this_dir / "/starcat.tsv"
+    if loc2.exists():
+        return loc1.absolute().expanduser()
+    raise IOError("Star catalog not found.")
 
 def read_star_catalog(starcat_file, brightness_thresh, t=None, cat_ep=None,
                       rB=None, excess_rows=None, index_col=2):
@@ -226,10 +237,16 @@ def read_star_catalog(starcat_file, brightness_thresh, t=None, cat_ep=None,
         t = Time.now().byear
     else:
         t = Time(t).byear
-    # t = 2024.25  TODO: why is this here?  What was this used for?
+
     if cat_ep is None:
         cat_ep = 1991.250
     cat_ep = Time(cat_ep, format='byear').byear
+
+    if rB is None:
+        rB = np.array([[0], [0], [0]])
+
+    if excess_rows is None:
+        excess_rows = [53, 54]
 
     # Column header names in Hipparcos star catalog
     HIP_ID = 'HIP'
@@ -250,21 +267,27 @@ def read_star_catalog(starcat_file, brightness_thresh, t=None, cat_ep=None,
     ra_de = np.array([starcat[RA].values, starcat[DE].values])
     pm_rade = np.array([starcat[PM_RA].values, starcat[PM_DE].values])
     plx = np.array(starcat[PLX].values)
+    mag = np.array(starcat[MAG].values)
 
     # Correct catalog entries for proper motion: 'u' is array of unit vectors to each star
     u, _ = cots_star_tracker.ground.proper_motion_correction(ra_de, pm_rade, plx, rB, t, cat_ep)
-    return u, starcat
+    return u, mag, starcat
 
 
 def create_star_catalog(starcat_file, brightness_thresh, cat_ep=None, t=None, rB=None,
                         excess_rows=None, index_col=2, save_vals=False, fov=None, save_dir=None):
+    """
+
+    Args:
+        rB: Observer location. Set to zero to just ignore parallax.
+    """
     import os
     import cots_star_tracker.rpi_core
     import numpy as np
     import itertools as it
 
     # Correct catalog entries for proper motion
-    u, _ = read_star_catalog(
+    u, mag, _ = read_star_catalog(
         starcat_file, brightness_thresh, excess_rows=excess_rows,
         cat_ep=cat_ep, t=t, rB=rB, index_col=index_col)
 
@@ -302,6 +325,7 @@ def create_star_catalog(starcat_file, brightness_thresh, cat_ep=None, t=None, rB
         np.save(os.path.join(save_dir,'m'), m)
         np.save(os.path.join(save_dir,'q'), q)
         np.save(os.path.join(save_dir,'u'), u)
+        np.save(os.path.join(save_dir,'mag'), mag)
         # np.save(os.path.join(save_dir,'isa_cat'), isa_cat)
         np.save(os.path.join(save_dir,'indexed_star_pairs'), isa_cat_idx)
 
