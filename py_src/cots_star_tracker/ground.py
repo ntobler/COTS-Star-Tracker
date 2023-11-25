@@ -219,12 +219,9 @@ def get_star_cat_file():
     """Return the star catalog file contained in this package/repository."""
     import pathlib
     this_dir = pathlib.Path(__file__).parent
-    loc1 = this_dir.parent.parent / "data/starcat.tsv"
-    if loc1.exists():
-        return loc1.absolute().expanduser()
-    loc2 = this_dir / "/starcat.tsv"
-    if loc2.exists():
-        return loc1.absolute().expanduser()
+    loc = this_dir / "starcat.tsv"
+    if loc.exists():
+        return loc.absolute().expanduser()
     raise IOError("Star catalog not found.")
 
 def read_star_catalog(starcat_file, brightness_thresh, t=None, cat_ep=None,
