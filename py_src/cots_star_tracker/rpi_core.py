@@ -336,9 +336,6 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
         pairs_match_bc = np.concatenate((star_pairs[idx_bc, :], star_pairs[idx_bc, ::-1]))
         pairs_match_ac = np.concatenate((star_pairs[idx_ac, :], star_pairs[idx_ac, ::-1]))
 
-        A_matches = pairs_match_ac[:, 0] == pairs_match_ab[:, 0]
-        B_matches = pairs_match_bc[:, 0] == pairs_match_ab[:, 1]
-
         for A, B in pairs_match_ab:
 
             # Find possible values for C from leg AC
