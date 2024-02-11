@@ -148,15 +148,22 @@ def reproject(img, c, idmatch, q_est, x_obs, x_cat):
     plt.show()
 
 
-def find_candidate_stars(img, low_thresh=None, hi_thresh=None,
-                         min_star_area=3, max_star_area=400, graphics=False):
+def find_candidate_stars(
+    img,
+    low_thresh=None,
+    hi_thresh=None,
+    min_star_area=3,
+    max_star_area=400,
+    graphics=False,
+    verbose=False,
+):
     import numpy as np
     import cv2
     from  cots_star_tracker.rpi_core import calculate_center_intensity
 
     if low_thresh is None:
         percent_thresh = 0.995
-        hist, bins = np.histogram(img.flatten(), 256, [0, 256])
+        hist = cv2.calcHist([img], [0], None, [256], [0, 256])[:, 0]
         cdf = hist.cumsum()
         cdf_normalized = cdf / cdf.max()
         idx_first_bin = np.where(cdf_normalized>percent_thresh)[0][0]

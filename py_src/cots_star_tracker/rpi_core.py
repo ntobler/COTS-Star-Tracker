@@ -47,6 +47,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 ################################
 #LOAD LIBRARIES
 ################################
+import math
+
 from cots_star_tracker.array_transformations import check_axis_decorator
 from cots_star_tracker.support_functions import timing_decorator
 
@@ -58,17 +60,8 @@ test_bool = True
 ################################
 #SUPPORT FUNCTIONS
 ################################
-@timing_decorator
 def nchoosek(n, k):
-    if n < 0 or k < 0:
-        return 0
-    # Calculates the number of combinations by choosing k number of
-    # combinations out of n possible numbers
-    # Inspired by Nas Banov's answer in: https://stackoverflow.com/questions/3025162/statistics-combinations-in-python
-    import operator as op    # or mul=lambda x,y:x*y
-    import fractions, functools
-    return int(functools.reduce(op.mul, (fractions.Fraction(n-i, i+1) for i in range(k)), 1))
-
+    return math.comb(n, k)
 
 @check_axis_decorator(6)
 def interstar_angle(star_pair, axis=None):
@@ -120,27 +113,21 @@ def enhanced_pattern_shifting(candidateIdx):
     n = len(candidateIdx)
     if n < 3:
         print('Length less than minimum')
-        return None
+        return
     u, c = np.unique(candidateIdx, return_counts=True)
     # check if duplicates exist
     dup = u[c > 1]
     if dup.size > 0:
         print('Duplicates found in candidate indices')
-        return None
-    pKernel = np.zeros([nchoosek(n, 3), 3], dtype=int)
-    m = 0
+        return
 
-    for dj in np.arange(1, n-2+1, dtype=int):
-        for dk in np.arange(1, n-dj-1+1, dtype=int):
-            for ii in [1, 2, 3]:
-                for i in np.arange(ii, n-dj-dk+1, 3, dtype=int):
+    for dj in range(1, n-2+1):
+        for dk in range(1, n-dj-1+1):
+            for ii in range(1, 4):
+                for i in range(ii, n-dj-dk+1, 3):
                     j = i + dj
                     k = j + dk
-                    pKernel[m, :] = [i, j, k]
-                    m = m + 1
-    #          if m >= 20:
-    #            return pKernel-1;
-    return pKernel-1
+                    yield (i - 1, j - 1, k - 1)
 
 
 def kvec_values(input_cat):
@@ -300,7 +287,7 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
     q_est = np.empty((4, ))
     q_est.fill(np.nan)
     # unpack star pairs and interstar angles from catalog
-    star_pairs = idx_star_pairs[:, 0:2].astype(int)
+    star_pairs = idx_star_pairs[:, 0:2].astype(int) #TODO split idx_star_pairs into 2 arrays of int and float to prevent astype funciton
     isa_cat = idx_star_pairs[:, 2:]
     # unpack k-vector interpolation values (slope and intercept)
     m, q = (k_vector_interp[0], k_vector_interp[1])
@@ -311,15 +298,12 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
         if verbose: print('Insufficient number of candidates to process for attitude estimation')
         return q_est, idmatch, nmatches
 
-    # Get all combinations of observed stars
-    mm = enhanced_pattern_shifting(np.arange(0, n_obs, 1, dtype=int))
-
-    if verbose: print("    [triangle_isa_id]: length of enhanced pattern shifting return: " + str(len(mm)))
-    for t_idx in mm:
+    # Iterate over all combinations of observed stars
+    for t_idx in enhanced_pattern_shifting(np.arange(0, n_obs, 1, dtype=int)):
         # calculate the interstar angle between each star pair with in the triplet
-        star_pair_ab = np.concatenate(([x_obs[:, t_idx[0]], x_obs[:, t_idx[1]]])).reshape(1, 6)
-        star_pair_bc = np.concatenate(([x_obs[:, t_idx[1]], x_obs[:, t_idx[2]]])).reshape(1, 6)
-        star_pair_ac = np.concatenate(([x_obs[:, t_idx[0]], x_obs[:, t_idx[2]]])).reshape(1, 6)
+        star_pair_ab = np.concatenate((x_obs[:, t_idx[0]], x_obs[:, t_idx[1]])).reshape(1, 6)
+        star_pair_bc = np.concatenate((x_obs[:, t_idx[1]], x_obs[:, t_idx[2]])).reshape(1, 6)
+        star_pair_ac = np.concatenate((x_obs[:, t_idx[0]], x_obs[:, t_idx[2]])).reshape(1, 6)
         isa_ab = interstar_angle(star_pair_ab)
         isa_bc = interstar_angle(star_pair_bc)
         isa_ac = interstar_angle(star_pair_ac)
@@ -353,9 +337,6 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
             if no_B_matches != 1:
                 # dont look any further
                 continue
-
-            if (time.monotonic() - start_time) > watchdog:
-                raise Exception("Timeout reached")
 
             # if we find that the number of matches above are both 1,
             # check if those two corresponding C values are the same
@@ -407,6 +388,9 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
                         q_est = xforms.attitude_matrix2quat(t_hat)
 
                         return q_est, idmatch, nmatches
+
+            if (time.monotonic() - start_time) > watchdog:
+                raise Exception("Timeout reached")
 
     # if no attitude found, return an attitude matrix of nan's
     if verbose:
