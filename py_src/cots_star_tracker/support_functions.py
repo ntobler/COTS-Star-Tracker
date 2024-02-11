@@ -195,8 +195,8 @@ def find_candidate_stars(img, low_thresh=None, hi_thresh=None,
         fig.tight_layout()
         plt.show()
 
-
-    print("Found " + str(len(contours)) + " contours")
+    if verbose:
+        print("Found " + str(len(contours)) + " contours")
 
     try:
         connectivity = 8
@@ -208,7 +208,8 @@ def find_candidate_stars(img, low_thresh=None, hi_thresh=None,
         # TODO determine if this needs to be resurrected
         # TODO should this use the raw image or binary image?  I think it should use raw like it is...
         coi, intensities = calculate_center_intensity(img, stats, min_star_area, max_star_area)
-        print("Found " + str(len(coi)) + " centroids")
+        if verbose:
+            print("Found " + str(len(coi)) + " centroids")
         return coi, intensities
 
 

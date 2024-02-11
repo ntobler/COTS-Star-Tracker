@@ -283,7 +283,7 @@ def attitude_svd(ei, es):
     return T
 
 
-@timing_decorator
+# @timing_decorator
 def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
                     k, k_vector_interp, watchdog=10., verbose=False):
     import time

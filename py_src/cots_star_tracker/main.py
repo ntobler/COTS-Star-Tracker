@@ -20,7 +20,7 @@ class StartrackerException(Exception):
     pass
 
 
-@support_functions.timing_decorator
+# @support_functions.timing_decorator
 def star_tracker(
     img: np.ndarray,
     cam_config_file_name: str,

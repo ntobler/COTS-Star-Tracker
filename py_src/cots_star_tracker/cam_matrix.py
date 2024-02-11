@@ -85,7 +85,7 @@ def read_cam_json(cam_config_file):
     import numpy as np
     import os
     import json
-    print("")
+
     if os.path.exists(cam_config_file):
         # print("reading camera parameters from file...")
         with open(cam_config_file, "r") as read_file:
