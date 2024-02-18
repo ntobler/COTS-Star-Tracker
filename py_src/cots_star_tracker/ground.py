@@ -59,27 +59,26 @@ def kvector(input_cat):
     m, q, sorted_cat = rpi_core.kvec_values(input_cat)
     nrow = len(sorted_cat)
 
-    k = np.ones((nrow, 1), dtype=int)
+    k = np.ones((nrow,), dtype=int)
 
     k[0] = 0
     k[-1] = nrow
-    for x in np.arange(1, nrow-1, 1, dtype=int):
+    for x in range(1, nrow-1):
         # Create k-vector catalog by finding the number of
         # items in the original catalog that are below the
         # value of the line
-        l = k[x-1][0]  # grab the previous (smaller) element in the array
+        l = k[x-1]  # grab the previous (smaller) element in the array
         z = m*(x+1) + q  # eqn 1
-        for y in np.arange(k[x-1], nrow-1, 1, dtype=int):
+
+        for y in range(l, nrow-1):
 
             # If the calculated z matches/exceeds that of the current catalog
             # entry, increment l by 1
-            if z >= sorted_cat[y, 1]:  # (eqn 2)
-                l += 1
-            else:
+            if z < sorted_cat[y, 1]:  # (eqn 2)
                 break
-        k[x] = l
-    return k, m, q, sorted_cat
+        k[x] = y
 
+    return k[:, None], m, q, sorted_cat
 
 @check_axis_decorator(2)
 def equatorial2vector(ra_de, axis=None):
@@ -289,9 +288,7 @@ def create_star_catalog(starcat_file, brightness_thresh, cat_ep=None, t=None, rB
         cat_ep=cat_ep, t=t, rB=rB, index_col=index_col)
 
     # Create star pairs using nchoosek
-    # star_idx = np.arange(0, len(u[0]))
-    star_idx = np.arange(0, u.shape[1])
-    star_pairs = np.array( list(it.combinations(star_idx, 2)) )
+    star_pairs = np.stack(np.triu_indices(u.shape[1], k=1), axis=-1)
 
     # Form star pairs unit vectors into an nx6 array
     u_starpairs = np.vstack((u[:, star_pairs[:, 0]],
