@@ -16,10 +16,6 @@ import cots_star_tracker.array_transformations as xforms
 from typing import Optional
 
 
-class StartrackerException(Exception):
-    pass
-
-
 # @support_functions.timing_decorator
 def star_tracker(
     img: np.ndarray,
@@ -75,7 +71,7 @@ def star_tracker(
 
     # if fewer than 3 centroids are found, don't bother.  Gums things up downstream.
     if len(centroids) < 3:
-        raise StartrackerException("Found too few star candidates (< 3) to continue.")
+        raise rpi_core.StartrackerError("Found too few star candidates (< 3) to continue.")
 
     if graphics:
         import matplotlib.pyplot as plt
@@ -117,7 +113,7 @@ def star_tracker(
         print(f"Number of star observations: {x_obs.shape[1]}")
 
     if np.isnan(x_obs).any():
-        raise StartrackerException("Failure to calculate x_obs")
+        raise rpi_core.StartrackerError("Failure to calculate x_obs")
 
     if verbose:
         print("Starting star ID")

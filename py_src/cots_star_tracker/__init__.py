@@ -2,3 +2,4 @@ from cots_star_tracker.main import star_tracker
 from cots_star_tracker.cam_matrix import read_cam_json
 from cots_star_tracker.ground import read_star_catalog, get_star_cat_file
 from cots_star_tracker.star_cat import create_catalog
+from cots_star_tracker.rpi_core import StartrackerError

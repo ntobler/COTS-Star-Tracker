@@ -60,6 +60,11 @@ test_bool = True
 ################################
 #SUPPORT FUNCTIONS
 ################################
+
+class StartrackerError(Exception):
+    pass
+
+
 def nchoosek(n, k):
     return math.comb(n, k)
 
@@ -279,13 +284,9 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
 
     # initialize values
     start_time = time.monotonic()
-    nmatches = 0
     nmatch_array = [] #used for troubleshooting
     unsolved_potentials = 0 #used for troubleshooting
     solved_potentials = 0 #used for troubleshooting
-    idmatch = np.zeros(len(x_obs[0]))
-    q_est = np.empty((4, ))
-    q_est.fill(np.nan)
     # unpack star pairs and interstar angles from catalog
     star_pairs = idx_star_pairs[:, 0:2].astype(int) #TODO split idx_star_pairs into 2 arrays of int and float to prevent astype funciton
     isa_cat = idx_star_pairs[:, 2:]
@@ -295,8 +296,7 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
     # perform enhanced pattern shifting to produce star triplets
     n_obs = len(x_obs[0])
     if n_obs < nmatch:
-        if verbose: print('Insufficient number of candidates to process for attitude estimation')
-        return q_est, idmatch, nmatches
+        raise StartrackerError("Insufficient number of candidates to process for attitude estimation")
 
     # Iterate over all combinations of observed stars
     for t_idx in enhanced_pattern_shifting(np.arange(0, n_obs, 1, dtype=int)):
@@ -386,11 +386,12 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
 
                         # convert attitude matrix to quaternion
                         q_est = xforms.attitude_matrix2quat(t_hat)
+                        assert idmatch.ndim==2
 
                         return q_est, idmatch, nmatches
 
             if (time.monotonic() - start_time) > watchdog:
-                raise Exception("Timeout reached")
+                raise StartrackerError("Timeout reached")
 
     # if no attitude found, return an attitude matrix of nan's
     if verbose:
@@ -405,12 +406,7 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
         print("    [triangle_isa_id]: unsolved_potentials: " +str(unsolved_potentials))
         print("    [triangle_isa_id]: solved_potentials: " +str(solved_potentials))
 
-    nmatches = 0
-    idmatch = np.zeros(len(x_obs[0]))
-    q_est = np.empty((4, ))
-    q_est.fill(np.nan)
-
-    return q_est, idmatch, nmatches
+    raise StartrackerError("Search exhausted")
 
 
 def calculate_center_intensity(img, stats, min_star_area, max_star_area):
