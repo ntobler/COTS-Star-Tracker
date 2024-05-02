@@ -157,15 +157,14 @@ def proper_motion_correction(ra_de_deg, pm_rade_mas, plx_mas, rB, t, t_ep, axis=
     import cots_star_tracker.array_transformations as xforms
     import math
     import numpy as np
-    import numpy.matlib as matlib
 
     if ra_de_deg.shape != pm_rade_mas.shape:
         raise ValueError("ERROR ["+str(__name__)+"]: Dimensions for RA/DEC and proper motion do not agree")
 
-    deg2rad = math.pi/180;
-    arcsec2deg = 1/3600;
-    mas2arcsec = 1/1000;
-    mas2rad = mas2arcsec*arcsec2deg*deg2rad;
+    deg2rad = math.pi/180
+    arcsec2deg = 1/3600
+    mas2arcsec = 1/1000
+    mas2rad = mas2arcsec*arcsec2deg*deg2rad
 
     AU = 1.496e8; #in km
     # return 3xn Line-of-Sight vector array and orthogonal
@@ -188,15 +187,16 @@ def proper_motion_correction(ra_de_deg, pm_rade_mas, plx_mas, rB, t, t_ep, axis=
     # Find location of observer in units of AU
     if rB is None:
         rB = np.array([[149597870.693],[0],[0]])
-    rObs_AU = rB/au;
+    rObs_AU = rB/au
 
     # Define rB as BCRF position (in km) of celestial object that the spacecraft orbits
     # if no rB provided, assume that s/c is orbiting Earth: 149597870.693 km
 
     # Incorporate proper motion into already existing u vector:
     # ui = l_i+(t-t_ep)*(mua_i*p+mud_i*q)-(w_i*rB)/AU
-    r_au_mat = matlib.repmat(rObs_AU, 1, len(plx_rad))
-    plx = -plx_rad*r_au_mat;
+    r_au_mat = np.tile(rObs_AU, (1, len(plx_rad)))
+
+    plx = -plx_rad*r_au_mat
 
     u = los + pm + plx
     return xforms.normalize_vector_array(u), los

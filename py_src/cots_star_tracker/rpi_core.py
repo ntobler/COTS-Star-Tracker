@@ -282,6 +282,8 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
     import numpy as np
     import cots_star_tracker.array_transformations as xforms
 
+    k = k.reshape((-1,)) # k may have shape [n, 1]
+
     # initialize values
     start_time = time.monotonic()
     nmatch_array = [] #used for troubleshooting
@@ -304,9 +306,9 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
         star_pair_ab = np.concatenate((x_obs[:, t_idx[0]], x_obs[:, t_idx[1]])).reshape(1, 6)
         star_pair_bc = np.concatenate((x_obs[:, t_idx[1]], x_obs[:, t_idx[2]])).reshape(1, 6)
         star_pair_ac = np.concatenate((x_obs[:, t_idx[0]], x_obs[:, t_idx[2]])).reshape(1, 6)
-        isa_ab = interstar_angle(star_pair_ab)
-        isa_bc = interstar_angle(star_pair_bc)
-        isa_ac = interstar_angle(star_pair_ac)
+        isa_ab = interstar_angle(star_pair_ab)[0]
+        isa_bc = interstar_angle(star_pair_bc)[0]
+        isa_ac = interstar_angle(star_pair_ac)[0]
 
         # Find the indices & angles of the catalog entries within a
         # specified tolerance
