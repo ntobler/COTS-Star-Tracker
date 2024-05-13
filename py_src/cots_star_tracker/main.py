@@ -13,13 +13,15 @@ import cots_star_tracker.cam_matrix as cam
 import cots_star_tracker.support_functions as support_functions
 import cots_star_tracker.array_transformations as xforms
 
-from typing import Optional
+from typing import Optional, Tuple, Union
+
+CameraParams = Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]
 
 
 # @support_functions.timing_decorator
 def star_tracker(
     img: np.ndarray,
-    cam_config_file_name: str,
+    cam_config_file_name: Union[str, CameraParams],
     m=None,
     q=None,
     x_cat=None,
@@ -41,7 +43,13 @@ def star_tracker(
     assert img.ndim == 2
     assert img.dtype == np.uint8
 
-    camera_matrix, cam_resolution, dist_coefs = cam.read_cam_json(cam_config_file_name)
+    if isinstance(cam_config_file_name, str):
+        camera_matrix, cam_resolution, dist_coefs = cam.read_cam_json(cam_config_file_name)
+    elif isinstance(cam_config_file_name, tuple) and len(cam_config_file_name) == 3:
+        camera_matrix, cam_resolution, dist_coefs = cam_config_file_name
+    else:
+        raise ValueError("Bad argument: cam_config_file_name")
+
     dist_coefs = np.array(dist_coefs)
     im_resolution = np.array([img.shape[1], img.shape[0]], dtype=int)  # pixels
 
