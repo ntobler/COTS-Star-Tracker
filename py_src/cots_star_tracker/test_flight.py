@@ -34,6 +34,7 @@ class TestFlight(TestCase):
         # self.assertIsNone(flight.nchoosek(1, -10))
     #
     def test_interstar_angle(self):
+        #TODO interstar_angle function changed
         arr = np.array([[1, 0, 0, 0, 1, 0]])
         # flight.interstar_angle(arr, axis=None)
         self.assertEqual(

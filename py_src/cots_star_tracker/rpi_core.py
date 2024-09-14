@@ -48,6 +48,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 #LOAD LIBRARIES
 ################################
 import math
+import numpy as np
 
 from cots_star_tracker.array_transformations import check_axis_decorator
 from cots_star_tracker.support_functions import timing_decorator
@@ -68,36 +69,15 @@ class StartrackerError(Exception):
 def nchoosek(n, k):
     return math.comb(n, k)
 
-@check_axis_decorator(6)
-def interstar_angle(star_pair, axis=None):
-    # Calculates the interstar angle given unit vectors pointing to respective
-    # stars
-    # Accepts both 3xn (preferred) and nx3 arrays of vectors
-    # axis = 0: pairs of stars are column vectors
-    # axis = 1: pairs of stars are row vectors
-    import numpy as np
-    import cots_star_tracker.array_transformations as xforms
-    # determine if star pairs are row or column vectors
-    # and perform the dot product for each unit vector pair
-    # ndim = 6
-    # axis = xforms.check_axis(star_pair, ndim, axis=axis)
-
-    if axis == 0:
-        star1 = star_pair[0:3, :]
-        star2 = star_pair[3:6, :]
-        dotp = xforms.vector_dot(star1, star2)
-    elif axis == 1:
-        star1 = star_pair[:, 0:3]
-        star2 = star_pair[:, 3:6]
-        dotp = xforms.vector_dot(star1.T, star2.T)
-    else:  # possibly an empty array
-        raise ValueError("ERROR ["+str(__name__)+"]: {0} is not a valid axis. Error passed to {1}".format(axis, __name__))
-
+def interstar_angle(star_a: np.ndarray, star_b: np.ndarray) -> float:
+    """Calculates the inter-star angle given unit vectors pointing to respective
+    stars
+    """
+    dotp = np.dot(star_a, star_b)
     # sometimes the dot product returns values just over 1.0, so set to 1.0
-    [print(x) for x in dotp if (x > 1.0005) ]
-    dotp = np.array([x if x <= 1.0 else 1.0 for x in dotp])
+    dotp = np.clip(dotp, None, 1.0)
     # return the arccosine to calculate the interstar angle
-    return np.arccos(dotp)
+    return float(np.arccos(dotp))
 
 
 def enhanced_pattern_shifting(candidateIdx):
@@ -276,8 +256,22 @@ def attitude_svd(ei, es):
 
 
 # @timing_decorator
-def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
+def triangle_isa_id(x_obs: np.ndarray, x_cat: np.ndarray, idx_star_pairs: np.ndarray, isa_thresh: float, nmatch: int,
                     k, k_vector_interp, watchdog=10., verbose=False):
+    """
+    Perform triangle inter-star angle matching
+
+    Args:
+        x_obs: Observation positions of stars (x, y, z). norm=1. shape=[3, n]
+        x_cat: Catalog positions of stars (x, y, z). norm=1, shape=[3, m]
+        idx_star_pairs: Star pairs index and inter star angle e.g.
+            [m_index1, m_index2, inter star angle]. shape=[o, 4]
+        isa_thresh: Absolute inter-star angle tolerance threshold.
+            Observation inter-star angle must be within this
+            tolerance to be matched.
+        nmatch: minimum amount of matches required for success.
+    
+    """
     import time
     import numpy as np
     import cots_star_tracker.array_transformations as xforms
@@ -287,10 +281,10 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
     # initialize values
     start_time = time.monotonic()
     nmatch_array = [] #used for troubleshooting
-    unsolved_potentials = 0 #used for troubleshooting
     solved_potentials = 0 #used for troubleshooting
-    # unpack star pairs and interstar angles from catalog
-    star_pairs = idx_star_pairs[:, 0:2].astype(int) #TODO split idx_star_pairs into 2 arrays of int and float to prevent astype funciton
+    # unpack star pairs and inter-star angles from catalog
+    #TODO split idx_star_pairs into 2 arrays of int and float to prevent astype funciton
+    star_pairs = idx_star_pairs[:, 0:2].astype(np.int32)
     isa_cat = idx_star_pairs[:, 2:]
     # unpack k-vector interpolation values (slope and intercept)
     m, q = (k_vector_interp[0], k_vector_interp[1])
@@ -303,12 +297,14 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
     # Iterate over all combinations of observed stars
     for t_idx in enhanced_pattern_shifting(np.arange(0, n_obs, 1, dtype=int)):
         # calculate the interstar angle between each star pair with in the triplet
-        star_pair_ab = np.concatenate((x_obs[:, t_idx[0]], x_obs[:, t_idx[1]])).reshape(1, 6)
-        star_pair_bc = np.concatenate((x_obs[:, t_idx[1]], x_obs[:, t_idx[2]])).reshape(1, 6)
-        star_pair_ac = np.concatenate((x_obs[:, t_idx[0]], x_obs[:, t_idx[2]])).reshape(1, 6)
-        isa_ab = interstar_angle(star_pair_ab)[0]
-        isa_bc = interstar_angle(star_pair_bc)[0]
-        isa_ac = interstar_angle(star_pair_ac)[0]
+
+        obs_a = x_obs[:, t_idx[0]]
+        obs_b = x_obs[:, t_idx[1]]
+        obs_c = x_obs[:, t_idx[2]]
+
+        isa_ab = interstar_angle(obs_a, obs_b)
+        isa_bc = interstar_angle(obs_b, obs_c)
+        isa_ac = interstar_angle(obs_a, obs_c)
 
         # Find the indices & angles of the catalog entries within a
         # specified tolerance
@@ -319,78 +315,80 @@ def triangle_isa_id(x_obs, x_cat, idx_star_pairs, isa_thresh, nmatch,
         # Get the pair IDs from the catalog for each leg,
         # and repeat the match lists so that pair order matters
         pairs_match_ab = np.concatenate((star_pairs[idx_ab, :], star_pairs[idx_ab, ::-1]))
-        pairs_match_bc = np.concatenate((star_pairs[idx_bc, :], star_pairs[idx_bc, ::-1]))
-        pairs_match_ac = np.concatenate((star_pairs[idx_ac, :], star_pairs[idx_ac, ::-1]))
+        # Create congruent arrays to boost performance
+        pairs_match_bc_first = np.concatenate((star_pairs[idx_bc, 0], star_pairs[idx_bc, 1]))
+        pairs_match_bc_second = np.concatenate((star_pairs[idx_bc, 1], star_pairs[idx_bc, 0]))
+        pairs_match_ac_first = np.concatenate((star_pairs[idx_ac, 0], star_pairs[idx_ac, 1]))
+        pairs_match_ac_second = np.concatenate((star_pairs[idx_ac, 1], star_pairs[idx_ac, 0]))
 
+        # Iterate over base segments (AB connection candidates)
         for A, B in pairs_match_ab:
 
             # Find possible values for C from leg AC
-            A_matches = np.where(pairs_match_ac[:, 0] == A)[0]
-            no_A_matches = len(A_matches)
+            A_matches = (pairs_match_ac_first == A).nonzero()[0]
 
-            if no_A_matches != 1:
+            if A_matches.size == 0:
                 # dont look any further
                 continue
 
             # Find possible values for C from leg BC
-            B_matches = np.where(pairs_match_bc[:, 0] == B)[0]
-            no_B_matches = len(B_matches)
+            B_matches = (pairs_match_bc_first == B).nonzero()[0]
 
-            if no_B_matches != 1:
+            if B_matches.size == 0:
                 # dont look any further
                 continue
 
-            # if we find that the number of matches above are both 1,
-            # check if those two corresponding C values are the same
-            #TODO: this explicitly requires only 1 match, look into making this more robust and/or a way to find all 3 catalog angle matches in one go
-            if no_A_matches > 1 or no_B_matches > 1:
-                if no_A_matches > 0 and no_B_matches > 0:
-                    unsolved_potentials += 1
+            # If there are candidates for both legs, get the ids of the matched stars for C
+            C1 = pairs_match_ac_second[A_matches]
+            C2 = pairs_match_bc_second[B_matches]
 
-            if no_A_matches == 1 and no_B_matches == 1:
+            # Calculate intersection
+            aux = np.concatenate((C1, C2))
+            aux.sort()
+            mask = aux[1:] == aux[:-1]
+            C_intersections = aux[:-1][mask]
+
+            # Iterate over all Cs that are in both sets
+            for C in C_intersections:
+
                 solved_potentials+=1
 
-                #TODO: could ditch the above, BUT would then need to clean up lists by removing those that aren't common to all
-                C1 = pairs_match_ac[A_matches, 1]
-                C2 = pairs_match_bc[B_matches, 1]
+                # get matched triangle positions
+                p = x_cat[:, [A, B, C]]
+                y = x_obs[:, t_idx]
 
-                if C1 == C2:
-                    # get
-                    p = x_cat[:, [A, B, C1[0]]]
-                    y = x_obs[:, t_idx]
+                # perform singular value decomposition using Wahba's problem
+                t_hat = attitude_svd(p, y)
 
-                    # perform singular value decomposition using Wahba's problem
-                    t_hat = attitude_svd(p, y)
+                # rotate all stars in the camera frame into the estimated attitude frame
+                x_obs_CATFRAME = xforms.vector_array_transform(t_hat.T, x_obs)
 
-                    # rotate all stars in the camera frame into the estimated attitude frame
-                    x_obs_CATFRAME = xforms.vector_array_transform(t_hat.T, x_obs)
+                # check the number of stars that align with candidate stars
+                idmatch, nmatches = full_obs_match(x_obs_CATFRAME, x_cat, isa_thresh)
 
-                    # check the number of stars that align with candidate stars
-                    idmatch, nmatches = full_obs_match(x_obs_CATFRAME, x_cat, isa_thresh)
+                if verbose:
+                    nmatch_array+=[nmatches]
 
-                    if verbose: nmatch_array+=[nmatches]
+                # if we meet or exceed the number of matches required, return the result
+                if nmatches >= nmatch:
 
-                    # if we meet or exceed the number of matches required, return the result
-                    if nmatches >= nmatch:
-
-                        if verbose:
-                            print("    [triangle_isa_id]: Success-- found "+str(nmatches)+" matches")
-                            print("    [triangle_isa_id]: nmatch array len: " +str(len(nmatch_array)))
-                            print("    [triangle_isa_id]: number of nmatch=0: " +str(nmatch_array.count(0)))
-                            print("    [triangle_isa_id]: number of nmatch=1: " +str(nmatch_array.count(1)))
-                            print("    [triangle_isa_id]: number of nmatch=2: " +str(nmatch_array.count(2)))
-                            print("    [triangle_isa_id]: number of nmatch=3: " +str(nmatch_array.count(3)))
-                            print("    [triangle_isa_id]: number of nmatch=4: " +str(nmatch_array.count(4)))
-                            print("    [triangle_isa_id]: number of nmatch=5: " +str(nmatch_array.count(5)))
-                            print("    [triangle_isa_id]: unsolved_potentials: " +str(unsolved_potentials))
-                            print("    [triangle_isa_id]: solved_potentials: " +str(solved_potentials))
+                    if verbose:
+                        print("    [triangle_isa_id]: Success-- found "+str(nmatches)+" matches")
+                        print("    [triangle_isa_id]: nmatch array len: " +str(len(nmatch_array)))
+                        print("    [triangle_isa_id]: number of nmatch=0: " +str(nmatch_array.count(0)))
+                        print("    [triangle_isa_id]: number of nmatch=1: " +str(nmatch_array.count(1)))
+                        print("    [triangle_isa_id]: number of nmatch=2: " +str(nmatch_array.count(2)))
+                        print("    [triangle_isa_id]: number of nmatch=3: " +str(nmatch_array.count(3)))
+                        print("    [triangle_isa_id]: number of nmatch=4: " +str(nmatch_array.count(4)))
+                        print("    [triangle_isa_id]: number of nmatch=5: " +str(nmatch_array.count(5)))
+                        print("    [triangle_isa_id]: solved_potentials: " +str(solved_potentials))
 
 
-                        # convert attitude matrix to quaternion
-                        q_est = xforms.attitude_matrix2quat(t_hat)
-                        assert idmatch.ndim==2
+                    # convert attitude matrix to quaternion
+                    q_est = xforms.attitude_matrix2quat(t_hat)
+                    assert idmatch.ndim==2
 
-                        return q_est, idmatch, nmatches
+                    return q_est, idmatch, nmatches
 
             if (time.monotonic() - start_time) > watchdog:
                 raise StartrackerError("Timeout reached")
@@ -441,7 +439,7 @@ def calculate_center_intensity(img, stats, min_star_area, max_star_area):
         right_pixel  = min(ncols-1, label[cv.CC_STAT_WIDTH]  + left_pixel)
         # mask of intensities in ROI, in [row, col]
         intensity = img[top_pixel:bottom_pixel+1, left_pixel:right_pixel+1]
-        intensity_sum = np.sum(intensity)
+        intensity_sum = intensity.sum(dtype=np.uint32)
         intensities[count, :] = intensity_sum
 
         #TODO: FIXME: intensity sum can sometimes be 0
@@ -454,8 +452,8 @@ def calculate_center_intensity(img, stats, min_star_area, max_star_area):
         if intensity_sum > 0: #else is only here due to issue w/ intensity_count == 0
 
             # print(sum(arange(left_pixel, right_pixel+1)*sum(intensities, axis=0).T))
-            x_bar = np.sum(np.arange(left_pixel, right_pixel+1)*np.sum(intensity, axis=0).T)/intensity_sum
-            y_bar = np.sum(np.arange(top_pixel, bottom_pixel+1)*np.sum(intensity, axis=1).T)/intensity_sum
+            x_bar = (np.arange(left_pixel, right_pixel+1, dtype=np.uint32)*intensity.sum(axis=0)).sum(dtype=np.float32)/intensity_sum
+            y_bar = (np.arange(top_pixel, bottom_pixel+1, dtype=np.uint32)*intensity.sum(axis=1)).sum(dtype=np.float32)/intensity_sum
             #coi[count, :] = [x_bar, y_bar]
             coi+=[[x_bar, y_bar]]
 

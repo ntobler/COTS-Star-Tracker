@@ -79,11 +79,8 @@ vector = array_transformations.pixel2vector(cinv, pixpoints)
 N = len(vector[0])
 c_star_pairs = np.array(list(combinations(np.arange(0, N, 1, dtype=int), 2)),
                         dtype=int)
-# Create nx6 matrix of candidate star pairs
-cand_sp = np.concatenate([vector[:, c_star_pairs[:, 0]],
-                          vector[:, c_star_pairs[:, 1]]], axis=0)
 # Find ISA
-c_ISA = flight.interstar_angle(cand_sp)
+c_ISA = flight.interstar_angle(vector[:, c_star_pairs[:, 0]], vector[:, c_star_pairs[:, 1]])
 
 # Now find stars
 x_obs = vector
