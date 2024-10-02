@@ -73,11 +73,14 @@ def interstar_angle(star_a: np.ndarray, star_b: np.ndarray) -> float:
     """Calculates the inter-star angle given unit vectors pointing to respective
     stars
     """
-    dotp = np.dot(star_a, star_b)
+    if star_a.ndim > 1:
+        dotp = np.einsum("ij..., ij...->j...", star_a, star_b)
+    else:
+        dotp = np.dot(star_a, star_b)
     # sometimes the dot product returns values just over 1.0, so set to 1.0
     dotp = np.clip(dotp, None, 1.0)
     # return the arccosine to calculate the interstar angle
-    return float(np.arccos(dotp))
+    return np.arccos(dotp)
 
 
 def enhanced_pattern_shifting(candidateIdx):

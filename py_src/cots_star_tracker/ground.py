@@ -290,12 +290,11 @@ def create_star_catalog(starcat_file, brightness_thresh, cat_ep=None, t=None, rB
     # Create star pairs using nchoosek
     star_pairs = np.stack(np.triu_indices(u.shape[1], k=1), axis=-1)
 
-    # Form star pairs unit vectors into an nx6 array
-    u_starpairs = np.vstack((u[:, star_pairs[:, 0]],
-                             u[:, star_pairs[:, 1]]))
-
     # Calculate interstar angles
-    istar_angle = cots_star_tracker.rpi_core.interstar_angle(u_starpairs)
+    istar_angle = cots_star_tracker.rpi_core.interstar_angle(
+        u[:, star_pairs[:, 0]],
+        u[:, star_pairs[:, 1]],
+    )
 
     # Remove star pairs that fall outside field of view angle
     if fov is not None:
